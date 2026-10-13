@@ -2,6 +2,8 @@
 
 namespace App\Application\Ports\Outbound;
 
+use App\Domain\Book;
+use App\Domain\Loan;
 use App\Domain\LoanItem;
 
 /** Port: loans. Loans and returns are never deleted (RN-5): there is no delete. */
@@ -12,4 +14,14 @@ interface LoanRepository
 
     /** Q7: lines of a member not yet returned (count and overdue check, CA-06.4, CA-06.5). @return list<LoanItem> */
     public function unreturnedItemsOfMember(string $memberId): array;
+
+    /**
+     * Stores the loan, its lines and the withdrawn books in ONE transaction (architecture.md §4).
+     * Each book is written only if its copies did not change since it was read (ADR-002); otherwise nothing is stored.
+     *
+     * @param  list<Book>  $books  books returned by Loan::lend, with their copies already withdrawn
+     *
+     * @throws ConcurrencyConflict
+     */
+    public function addLoan(Loan $loan, array $books): void;
 }
