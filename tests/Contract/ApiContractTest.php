@@ -162,6 +162,9 @@ it('registers, shows, lists and returns loans with every business error (HU-06, 
     $this->getJson("/api/v1/loans?member_id={$member}&status=open", $this->librarian)->assertOk()->assertJson(['total' => 1]);
 
     $this->clock->advance('+15 days');
+    assertError($this->getJson('/api/v1/loans/overdue', $this->librarian), 401, 'INVALID_CREDENTIALS'); // token older than 8 hours
+    $this->librarian = bearer($this->postJson('/api/v1/auth/login', ['username' => 'lib', 'password' => 'lib-pass'])->json('access_token'));
+    $this->admin = bearer($this->postJson('/api/v1/auth/login', ['username' => 'root', 'password' => 'admin-pass'])->json('access_token'));
     $this->getJson('/api/v1/loans/overdue', $this->librarian)->assertOk()
         ->assertJsonPath('items.0.loan_id', $loanId)->assertJsonPath('items.0.member_name', 'Socio 1')->assertJsonPath('items.0.days_late', 1);
     assertError($this->postJson('/api/v1/loans', ['member_id' => $member, 'items' => [['book_id' => $other]]], $this->librarian), 409, 'MEMBER_HAS_OVERDUE');

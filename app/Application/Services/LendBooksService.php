@@ -29,6 +29,10 @@ final readonly class LendBooksService
     /** @param list<string> $bookIds one per requested line, in request order */
     public function lend(string $memberId, string $loanedByUserId, array $bookIds): Loan
     {
+        // CA-06.1: the request itself must have 1 to 3 lines before any member rule is evaluated.
+        if (count($bookIds) < 1 || count($bookIds) > Loan::MAX_ITEMS) {
+            throw DomainError::validation('items', 'entre 1 y 3 libros', 'Un préstamo debe tener entre 1 y 3 libros.');
+        }
         if ($this->members->find($memberId) === null) {
             throw new DomainError('NOT_FOUND', 'El socio no existe.', [['field' => 'member_id', 'issue' => 'no existe']]);
         }
