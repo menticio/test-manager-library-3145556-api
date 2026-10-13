@@ -34,7 +34,7 @@ final class PortBindingsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(Clock::class, fn () => new SystemClock);
+        $this->app->singleton(Clock::class, fn () => new SystemClock((int) config('library.clock_offset_days')));
 
         $this->app->bind(UserRepository::class, fn () => new PgUserRepository);
         $this->app->bind(BookRepository::class, fn () => new PgBookRepository);
