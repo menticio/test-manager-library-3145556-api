@@ -2,6 +2,7 @@
 
 namespace Tests\Fakes;
 
+use App\Application\Page;
 use App\Application\Ports\Outbound\ConcurrencyConflict;
 use App\Application\Ports\Outbound\LoanRepository;
 use App\Application\Ports\Outbound\OverdueReader;
@@ -77,6 +78,16 @@ final class InMemoryLoanRepository implements LoanRepository, OverdueReader, Rep
         }
         $this->books?->save($book);
         $this->loans[$loan->id] = $loan;
+    }
+
+    public function search(?DateRange $range, ?string $status, ?string $memberId, DateTimeImmutable $now, int $page, int $size): Page
+    {
+        $matches = array_values(array_filter($this->loans, fn (Loan $loan) => ($memberId === null || $loan->memberId === $memberId)
+            && ($status === null || $loan->status($now) === $status)
+            && ($range === null || ($loan->loanedAt >= $range->from && $loan->loanedAt < $range->to->modify('+1 day')))));
+        usort($matches, fn (Loan $a, Loan $b) => $b->loanedAt <=> $a->loanedAt);
+
+        return new Page(array_slice($matches, ($page - 1) * $size, $size), $page, $size, count($matches));
     }
 
     /** Same rule as the real query: grouped by the FROZEN values of each line, never by the live catalog. */

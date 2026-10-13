@@ -2,9 +2,12 @@
 
 namespace App\Application\Ports\Outbound;
 
+use App\Application\Page;
 use App\Domain\Book;
 use App\Domain\Loan;
 use App\Domain\LoanItem;
+use App\Domain\ValueObjects\DateRange;
+use DateTimeImmutable;
 
 /** Port: loans. Loans and returns are never deleted (RN-5): there is no delete. */
 interface LoanRepository
@@ -35,4 +38,12 @@ interface LoanRepository
      * @throws ConcurrencyConflict
      */
     public function saveReturn(Loan $loan, string $itemId, Book $book): void;
+
+    /**
+     * Q6: loans by loaned_at range (both days inclusive), computed status and member, newest first (CA-08.2).
+     * The status filter is evaluated against $now because the status is not stored (CA-08.3).
+     *
+     * @return Page<Loan>
+     */
+    public function search(?DateRange $range, ?string $status, ?string $memberId, DateTimeImmutable $now, int $page, int $size): Page;
 }
