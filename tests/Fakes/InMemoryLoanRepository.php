@@ -5,11 +5,13 @@ namespace Tests\Fakes;
 use App\Application\Ports\Outbound\ConcurrencyConflict;
 use App\Application\Ports\Outbound\LoanRepository;
 use App\Application\Ports\Outbound\OverdueReader;
+use App\Application\Ports\Outbound\ReportReader;
 use App\Domain\Book;
 use App\Domain\Loan;
+use App\Domain\ValueObjects\DateRange;
 use DateTimeImmutable;
 
-final class InMemoryLoanRepository implements LoanRepository, OverdueReader
+final class InMemoryLoanRepository implements LoanRepository, OverdueReader, ReportReader
 {
     /** @var array<string, Loan> */
     public array $loans = [];
@@ -75,6 +77,27 @@ final class InMemoryLoanRepository implements LoanRepository, OverdueReader
         }
         $this->books?->save($book);
         $this->loans[$loan->id] = $loan;
+    }
+
+    /** Same rule as the real query: grouped by the FROZEN values of each line, never by the live catalog. */
+    public function mostBorrowed(DateRange $range): array
+    {
+        $end = $range->to->modify('+1 day');
+        $rows = [];
+        foreach ($this->loans as $loan) {
+            if ($loan->loanedAt < $range->from || $loan->loanedAt >= $end) {
+                continue;
+            }
+            foreach ($loan->items as $item) {
+                $key = $item->bookId."\0".$item->bookTitle."\0".$item->categoryName;
+                $rows[$key] ??= ['book_id' => $item->bookId, 'book_title' => $item->bookTitle, 'category_name' => $item->categoryName, 'times_borrowed' => 0];
+                $rows[$key]['times_borrowed']++;
+            }
+        }
+        $rows = array_values($rows);
+        usort($rows, fn ($a, $b) => [$b['times_borrowed'], $a['book_title']] <=> [$a['times_borrowed'], $b['book_title']]);
+
+        return $rows;
     }
 
     public function unreturnedDueBefore(DateTimeImmutable $now): array
