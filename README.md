@@ -69,3 +69,20 @@ docker run --rm --env-file .env library-api vendor/bin/pest
 
 La única ruta registrada es `GET /api/v1/health`: se quitaron las rutas por defecto de Laravel que no están en
 `api-contract.md` (`/`, `/up` y `/storage/{path}`), y una prueba lo vigila.
+
+### Evidencia T-02 (migración inicial)
+
+Con el motor de `infra` levantado (red `library-net`):
+
+```bash
+docker run --rm --network library-net --env-file .env library-api php artisan migrate --force
+docker exec -i library-db psql -U library -d library < database/verification/data-model-section-10.sql
+```
+
+- [`database/verification/data-model-section-10.sql`](database/verification/data-model-section-10.sql) son las consultas de
+  `data-model.md` §10 copiadas tal cual. Devuelven las 30 columnas de §3 **sin ningún `DEFAULT`**, las PK/FK/CHECK de §4 y §5 y los índices de §4.
+- Esquema `library` con **seis tablas en singular**. La tabla de control de Laravel (`migrations`) vive en `public`, fuera del modelo.
+- Solo el `CHECK` marcado **motor** (`ck_book_available_range`). `ck_book_total_positive` y `ck_user_role` están **pendientes (T-18)** y no se crean aquí.
+- `loan_item.category_name` sin FK a propósito (ADR-004). ISBN único solo entre activos, con índice parcial (ADR-003).
+- Las cinco categorías se siembran con los identificadores fijos de §9. El admin **no** se siembra (lo crea el arranque, T-17).
+- La migración tiene reversa: `php artisan migrate:rollback` deja el esquema vacío.

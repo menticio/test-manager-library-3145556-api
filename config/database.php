@@ -95,7 +95,7 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            'search_path' => env('DB_SEARCH_PATH', 'library'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
@@ -128,7 +128,7 @@ return [
     */
 
     'migrations' => [
-        'table' => 'migrations',
+        'table' => 'public.migrations', // bookkeeping outside the six-table library schema
         'update_date_on_publish' => true,
     ],
 
