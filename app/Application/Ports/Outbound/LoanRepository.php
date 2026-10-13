@@ -24,4 +24,15 @@ interface LoanRepository
      * @throws ConcurrencyConflict
      */
     public function addLoan(Loan $loan, array $books): void;
+
+    /** Q5: loan with its lines. */
+    public function find(string $id): ?Loan;
+
+    /**
+     * Stores returned_at of one line and the restocked book in ONE transaction.
+     * The line is written only while returned_at is still null, so a line never adds a copy twice (CA-07.2).
+     *
+     * @throws ConcurrencyConflict
+     */
+    public function saveReturn(Loan $loan, string $itemId, Book $book): void;
 }

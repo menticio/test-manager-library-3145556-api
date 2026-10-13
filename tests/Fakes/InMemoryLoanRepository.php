@@ -4,9 +4,12 @@ namespace Tests\Fakes;
 
 use App\Application\Ports\Outbound\ConcurrencyConflict;
 use App\Application\Ports\Outbound\LoanRepository;
+use App\Application\Ports\Outbound\OverdueReader;
+use App\Domain\Book;
 use App\Domain\Loan;
+use DateTimeImmutable;
 
-final class InMemoryLoanRepository implements LoanRepository
+final class InMemoryLoanRepository implements LoanRepository, OverdueReader
 {
     /** @var array<string, Loan> */
     public array $loans = [];
@@ -14,7 +17,10 @@ final class InMemoryLoanRepository implements LoanRepository
     /** Number of upcoming addLoan calls that must fail with a version conflict. */
     public int $conflictsToSimulate = 0;
 
-    public function __construct(private ?InMemoryBookRepository $books = null) {}
+    public function __construct(
+        private ?InMemoryBookRepository $books = null,
+        private ?InMemoryMemberRepository $members = null,
+    ) {}
 
     public function countUnreturnedForBook(string $bookId): int
     {
@@ -55,5 +61,34 @@ final class InMemoryLoanRepository implements LoanRepository
             $this->books?->save($book);
         }
         $this->loans[$loan->id] = $loan;
+    }
+
+    public function find(string $id): ?Loan
+    {
+        return $this->loans[$id] ?? null;
+    }
+
+    public function saveReturn(Loan $loan, string $itemId, Book $book): void
+    {
+        if ($this->loans[$loan->id]->item($itemId)?->isReturned()) {
+            throw new ConcurrencyConflict;
+        }
+        $this->books?->save($book);
+        $this->loans[$loan->id] = $loan;
+    }
+
+    public function unreturnedDueBefore(DateTimeImmutable $now): array
+    {
+        $rows = [];
+        foreach ($this->loans as $loan) {
+            foreach ($loan->items as $item) {
+                if ($item->isOverdue($now)) {
+                    $rows[] = ['loan_id' => $loan->id, 'item_id' => $item->id, 'book_title' => $item->bookTitle,
+                        'member_name' => $this->members?->find($loan->memberId)?->fullName ?? '', 'due_at' => $item->dueAt];
+                }
+            }
+        }
+
+        return $rows;
     }
 }
