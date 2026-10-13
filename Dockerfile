@@ -10,7 +10,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 COPY . .
-RUN if [ -f composer.json ]; then composer install --no-interaction --prefer-dist; fi
+# vendor/ is reused when present (installed with this same PHP image); composer only runs without it
+RUN if [ -f composer.json ] && [ ! -d vendor ]; then composer install --no-interaction --prefer-dist; fi
 
 ENV TZ=UTC
 EXPOSE 8000
