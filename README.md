@@ -48,3 +48,24 @@ No hay prórroga: suban avances parciales con commits pequeños durante la prueb
 | [`test-manager-library-3145556-page`](https://github.com/code-sena/test-manager-library-3145556-page) | Sitio público estático de presentación |
 | [`test-manager-library-3145556-infra`](https://github.com/code-sena/test-manager-library-3145556-infra) | Contenedores, red, volúmenes y motor de base de datos vacío |
 | [`test-manager-library-3145556-tool`](https://github.com/code-sena/test-manager-library-3145556-tool) | Utilidades: sembrador de datos de demostración |
+
+## Cómo levantar la API
+
+```bash
+cp .env.example .env          # completar DB_PASSWORD, JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD
+docker build -t library-api .
+docker run --rm --env-file .env -p 8000:8000 library-api
+```
+
+Decisiones de tecnología en [`spec-laravel/`](https://github.com/menticio/test-manager-library-3145556-docs/tree/main/spec-laravel)
+del repositorio `docs` ([ADR-005](https://github.com/menticio/test-manager-library-3145556-docs/blob/main/spec-laravel/adr/adr-005-traduccion-a-react-y-laravel.md)).
+
+### Evidencia T-01
+
+```bash
+curl http://localhost:8000/api/v1/health      # {"status":"ok"}
+docker run --rm --env-file .env library-api vendor/bin/pest
+```
+
+La única ruta registrada es `GET /api/v1/health`: se quitaron las rutas por defecto de Laravel que no están en
+`api-contract.md` (`/`, `/up` y `/storage/{path}`), y una prueba lo vigila.
