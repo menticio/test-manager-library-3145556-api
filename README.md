@@ -86,3 +86,31 @@ docker exec -i library-db psql -U library -d library < database/verification/dat
 - `loan_item.category_name` sin FK a propósito (ADR-004). ISBN único solo entre activos, con índice parcial (ADR-003).
 - Las cinco categorías se siembran con los identificadores fijos de §9. El admin **no** se siembra (lo crea el arranque, T-17).
 - La migración tiene reversa: `php artisan migrate:rollback` deja el esquema vacío.
+
+### Evidencia T-17 (arranque con la base vacía)
+
+`docker/start.sh` es el arranque: `migrate` (el esquema es de las migraciones, ADR-001) → `library:provision-admin`
+(admin desde `ADMIN_USERNAME` / `ADMIN_PASSWORD`, D-10, idempotente) → servidor.
+
+```bash
+php artisan migrate:rollback --force                       # esquema library vacío
+sh docker/start.sh                                         # migra, crea el admin y sirve
+curl -X POST localhost:8000/api/v1/auth/login -H 'Content-Type: application/json' \
+     -d '{"username":"<ADMIN_USERNAME>","password":"<ADMIN_PASSWORD>"}'   # → role "admin"
+```
+
+La clave del admin nunca se imprime ni aparece en los logs. Pruebas: `tests/Application/ProvisionAdminTest.php` y
+`tests/Integration/StartupTest.php`.
+
+## Pruebas
+
+```bash
+vendor/bin/pest     # Domain, Application (fakes), Integration y Contract (PostgreSQL real), Feature
+```
+
+| Nivel | Carpeta | Contra qué |
+|---|---|---|
+| Dominio | `tests/Domain` | nada: objetos puros |
+| Aplicación | `tests/Application` | fakes de los puertos (`tests/Fakes`) |
+| Integración | `tests/Integration` | PostgreSQL real de `infra` (cada prueba se revierte) |
+| Contrato | `tests/Contract` | la API con todas las rutas y códigos de `api-contract.md` |

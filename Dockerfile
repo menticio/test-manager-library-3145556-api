@@ -14,4 +14,5 @@ RUN if [ -f composer.json ]; then composer install --no-interaction --prefer-dis
 
 ENV TZ=UTC
 EXPOSE 8000
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+RUN chmod +x docker/start.sh
+CMD ["sh", "docker/start.sh"]
