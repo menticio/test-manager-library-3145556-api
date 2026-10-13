@@ -21,4 +21,21 @@ final class InMemoryLoanRepository implements LoanRepository
 
         return $count;
     }
+
+    public function unreturnedItemsOfMember(string $memberId): array
+    {
+        $items = [];
+        foreach ($this->loans as $loan) {
+            if ($loan->memberId !== $memberId) {
+                continue;
+            }
+            foreach ($loan->items as $item) {
+                if (! $item->isReturned()) {
+                    $items[] = $item;
+                }
+            }
+        }
+
+        return $items;
+    }
 }
